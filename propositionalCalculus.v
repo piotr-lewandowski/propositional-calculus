@@ -3,6 +3,7 @@ Notation eqBool := eqb.
 Require Import String. 
 Require Import List. 
 Import ListNotations.
+Require Import Lia.
 
 Notation propVar := string. 
 
@@ -223,5 +224,48 @@ Proof.
   trivial.
   trivial.
 Qed.
+
+Inductive peirce :=
+  | peirce_var : propVar -> peirce
+  | peirce_arrow: peirce -> peirce -> peirce.
   
+Notation "% s" := (peirce_var s) (at level 1).
+Notation "p \\ r" := (peirce_arrow p r) (at level 5, left associativity).
   
+Fixpoint evalP (s : peirce) (l : list assignment): bool :=
+  match s with
+  | % s => retrieveBool s l
+  | p \\ r => negb (orb (evalP p l) (evalP r l))
+  end.
+  
+Definition negP (r : peirce) : peirce := r \\ r.
+Definition schefferP (r q : peirce) : peirce := negP ((negP r) \\ (negP q)).
+  
+Fixpoint convertToPeirce (p : scheffer) : peirce :=
+  match p with
+  | $ s => % s
+  | r // q => schefferP (convertToPeirce r) (convertToPeirce q)
+  end.
+  
+Theorem peirce_scheffer_equivalence : forall s : scheffer, exists p : peirce, forall l : list assignment, evalS s l = evalP p l.
+Proof.
+  intros.
+  induction s.
+  (* constant *)
+  exists (% s).
+  trivial.
+  (* scheffer *)
+  destruct IHs1, IHs2.
+  exists (schefferP x x0).
+  intro l.
+  simpl.
+  rewrite (H l).
+  rewrite (H0 l).
+  destruct (evalP x l), (evalP x0 l).
+  trivial.
+  trivial.
+  trivial.
+  trivial.
+Qed.
+  
+Theorem peirce_universality : forall p : proposition, exists s : scheffer, forall l : list assignment, evalS s l = eval p l.
