@@ -3,7 +3,6 @@ Notation eqBool := eqb.
 Require Import String. 
 Require Import List. 
 Import ListNotations.
-Require Import Lia.
 
 Notation propVar := string. 
 
@@ -148,14 +147,14 @@ Definition orS (r q : scheffer) : scheffer := negS (andS (negS r) (negS q)).
 Definition implS (r q : scheffer) : scheffer := orS (negS r) q.
 Definition equivS (r q : scheffer) : scheffer := andS (implS r q) (implS q r).
   
-Fixpoint convertToScheffer (p : proposition) : scheffer :=
+Fixpoint convertPropToScheffer (p : proposition) : scheffer :=
   match p with
   | # s => $ s
-  | ¬ r => negS (convertToScheffer r)
-  | r ∨ q => let rs := convertToScheffer r in let qs := convertToScheffer q in orS rs qs
-  | r ∧ q => let rs := convertToScheffer r in let qs := convertToScheffer q in andS rs qs
-  | r → q => let rs := convertToScheffer r in let qs := convertToScheffer q in implS rs qs
-  | r <=> q => let rs := convertToScheffer r in let qs := convertToScheffer q in equivS rs qs
+  | ¬ r => negS (convertPropToScheffer r)
+  | r ∨ q => let rs := convertPropToScheffer r in let qs := convertPropToScheffer q in orS rs qs
+  | r ∧ q => let rs := convertPropToScheffer r in let qs := convertPropToScheffer q in andS rs qs
+  | r → q => let rs := convertPropToScheffer r in let qs := convertPropToScheffer q in implS rs qs
+  | r <=> q => let rs := convertPropToScheffer r in let qs := convertPropToScheffer q in equivS rs qs
   end.
   
 Theorem scheffer_universality : forall p : proposition, exists s : scheffer, forall l : list assignment, evalS s l = eval p l.
@@ -171,7 +170,6 @@ Proof.
   intro l.
   simpl.
   rewrite (H l).
-  auto.
   destruct (eval p l).
   trivial.
   trivial.
@@ -241,10 +239,10 @@ Fixpoint evalP (s : peirce) (l : list assignment): bool :=
 Definition negP (r : peirce) : peirce := r \\ r.
 Definition schefferP (r q : peirce) : peirce := negP ((negP r) \\ (negP q)).
   
-Fixpoint convertToPeirce (p : scheffer) : peirce :=
+Fixpoint convertSchefferToPeirce (p : scheffer) : peirce :=
   match p with
   | $ s => % s
-  | r // q => schefferP (convertToPeirce r) (convertToPeirce q)
+  | r // q => schefferP (convertSchefferToPeirce r) (convertSchefferToPeirce q)
   end.
   
 Theorem peirce_scheffer_equivalence : forall s : scheffer, exists p : peirce, forall l : list assignment, evalS s l = evalP p l.
@@ -267,5 +265,84 @@ Proof.
   trivial.
   trivial.
 Qed.
+
+Definition orP (r q : peirce) : peirce := (q \\ r) \\ (q \\ r).
+Definition andP (r q : peirce) : peirce := negP (orP (negP r) (negP q)).
+Definition implP (r q : peirce) : peirce := orP (negP r) q.
+Definition equivP (r q : peirce) : peirce := andP (implP r q) (implP q r).
+
+Fixpoint convertPropToPeirce (p : proposition) : peirce := 
+  match p with
+  | # s => % s
+  | ¬ r => negP (convertPropToPeirce r)
+  | r ∨ q => let rr := convertPropToPeirce r in let qr := convertPropToPeirce q in orP rr qr
+  | r ∧ q => let rr := convertPropToPeirce r in let qr := convertPropToPeirce q in andP rr qr
+  | r → q => let rr := convertPropToPeirce r in let qr := convertPropToPeirce q in implP rr qr
+  | r <=> q => let rr := convertPropToPeirce r in let qr := convertPropToPeirce q in equivP rr qr
+  end.
   
-Theorem peirce_universality : forall p : proposition, exists s : scheffer, forall l : list assignment, evalS s l = eval p l.
+Theorem peirce_universality : forall p : proposition, exists r : peirce, forall l : list assignment, evalP r l = eval p l.
+Proof. 
+  intros.
+  induction p.
+  (* constants *)
+  exists (% s).
+  trivial.
+  (* negation *)
+  destruct IHp.
+  exists (negP x).
+  intro l.
+  simpl.
+  rewrite (H l).
+  destruct (eval p l).
+  trivial.
+  trivial.
+  (* conjunction *)
+  destruct IHp1, IHp2.
+  exists (andP x x0).
+  intro l.
+  simpl.
+  rewrite (H l).
+  rewrite (H0 l).
+  destruct (eval p1 l), (eval p2 l).
+  trivial.
+  trivial.
+  trivial.
+  trivial.
+  (* disjunction *)
+  destruct IHp1, IHp2.
+  exists (orP x x0).
+  intro l.
+  simpl.
+  rewrite (H l).
+  rewrite (H0 l).
+  destruct (eval p1 l), (eval p2 l).
+  trivial.
+  trivial.
+  trivial.
+  trivial.
+  (* implication *)
+  destruct IHp1, IHp2.
+  exists (implP x x0).
+  intro l.
+  simpl.
+  rewrite (H l).
+  rewrite (H0 l).
+  destruct (eval p1 l), (eval p2 l).
+  trivial.
+  trivial.
+  trivial.
+  trivial.
+  (* equivalence *)
+  destruct IHp1, IHp2.
+  exists (equivP x x0).
+  intro l.
+  simpl.
+  rewrite (H l).
+  rewrite (H0 l).
+  destruct (eval p1 l), (eval p2 l).
+  trivial.
+  trivial.
+  trivial.
+  trivial.
+Qed.
