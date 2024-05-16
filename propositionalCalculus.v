@@ -18,8 +18,8 @@ Inductive assignment := assign (s : propVar) (b : bool).
 
 Notation "# s" := (var s) (at level 1).
 Notation "¬ p" := (neg p) (at level 2).
-Notation "p ∨ r" := (conj p r) (at level 5, left associativity).
-Notation "p ∧ r" := (disj p r) (at level 5, left associativity).
+Notation "p ∧ r" := (conj p r) (at level 5, left associativity).
+Notation "p ∨ r" := (disj p r) (at level 5, left associativity).
 Notation "p → r" := (impl p r) (at level 10, left associativity).
 Notation "p <=> r" := (equiv p r) (at level 10, left associativity).
 Notation "s <- b" := (assign s b) (at level 0).  
